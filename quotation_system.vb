@@ -102,14 +102,27 @@ End Sub
 Sub GenerateQINumber
 	REM Read the last quotation/invoice number, increase it by 1 and place it
 	REM in the correct cell
+	
+	'String format to be used by the Format function to specify number of zeros
+	'for left-padding
+	Dim QINumFormatString As String
+	Dim i as Integer
+	
+	QINumFormatString = "0"
+	
+	'Compute format string. E.g. if quotation number is 7 digits, format string
+	'will be 7 zeros: 0000000
+	For i = 1 to QINUM_LENGTH-1
+		QINumFormatString = QINumFormatString + "0"
+	Next i
 
 	QINum = Val(Right(QIString, QINUM_LENGTH))
 	NewQINum = QINum + 50
 	
 	If QuoteOrInv = 0 Then
-		QICell.String = "Q" + Str(QINum)
+		QICell.String = "Q" + Format(NewQINum, QINumFormatString)
 	Else
-		QICell.String = "I" + Str(QINum)
+		QICell.String = "I" + Str(NewQINum, QINumFormatString)
 	End If
 
 End Sub
