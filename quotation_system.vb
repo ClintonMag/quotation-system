@@ -34,12 +34,15 @@ Dim QICell as Object
 'Quotation/Invoice Number
 Dim QINum As Long
 
+'Store the full quotation number as a string
+Dim QIString As String
+
 'New Quotation/Invoice Number
 Dim NewQINum as Long
 
 'Indicate whether we are working on a quotation or an invoice
 '0 for quotation, 1 for invoice
-Dim QoutOrInv as Boolean
+Dim QuoteOrInv as Integer
 
 'Index of the sheet named 'Quotation' in the ThisComponent.Sheets list
 Dim QSheetIndex as Integer
@@ -48,13 +51,13 @@ Dim QSheetIndex as Integer
 Function Cells(sheet As Object, x As Integer, y As Integer) As Object
 	REM Simplify calls to retrieve cell position by coordinates
 	
-	Cells = sheet.getCellByPosition(x-1, y-1)
+	Cells = sheet.getCellByPosition(y-1, x-1)
 End Function
 	
 Sub MainQuotation
 	REM Entry point if working on a quotation
 	
-	QoutOrInv = 0
+	QuoteOrInv = 0
 	MainProcess
 
 End Sub
@@ -62,7 +65,7 @@ End Sub
 Sub MainInvoice
 	REM Entry point if working on an invoice
 	
-	QoutOrInv = 1
+	QuoteOrInv = 1
 	MainProcess
 
 End Sub
@@ -80,7 +83,6 @@ End Sub
 Sub InitializeGlobals
 	REM Initializes the global variables
 	
-	
 	Doc = ThisComponent
 	
 	AllSheets = Doc.Sheets
@@ -90,9 +92,10 @@ Sub InitializeGlobals
 	' If working on quotation, QSheetIndex + QoutOrInv will be the "Quotation"
 	' sheet. If working on invoice,vQSheetIndex + QoutOrInv will be the
 	' "Invoice" sheet
-	QISheet = AllSheets.getByIndex(QSheetIndex + QoutOrInv)
+	QISheet = AllSheets.getByIndex(QSheetIndex + QuoteOrInv)
 	
 	QICell = Cells(QISheet, QIROW, QICOL)
+	QIString = Cells(AllSheets.getByName("QINUM"),1,1).String
 	
 End Sub
 
@@ -100,7 +103,7 @@ Sub GenerateQINumber
 	REM Read the last quotation/invoice number, increase it by 1 and place it
 	REM in the correct cell
 
-	QINum = Val(Right(QICell.String, QINUM_LENGTH))
+	QINum = Val(Right(QIString, QINUM_LENGTH))
 	NewQINum = QINum + 50
 	
 	If QuoteOrInv = 0 Then
@@ -108,5 +111,18 @@ Sub GenerateQINumber
 	Else
 		QICell.String = "I" + Str(QINum)
 	End If
+
+End Sub
+
+Sub Test
+
+	Doc = ThisComponent
+	AllSheets = Doc.Sheets
+	
+	Dim MySheet As Object
+	
+	MySheet = AllSheets.getByName("QINUM")
+	
+	MySheet.getCellByPosition(0,0).String = "Yes " + "And No"
 
 End Sub
