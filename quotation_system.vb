@@ -25,10 +25,15 @@ Const QROW As Integer = 1
 Const QCOL As Integer = 1
 Const IROW As Integer = 2
 
+'Location in Quotation/Invoice Sheet of the client name
+Const CLIENT_ROW As Integer = 6
+Const CLIENT_COL As Integer = 1
+
 'Sheet in which quotations are made
 Const QUOTATION_SHEET As String = "Quotation"
 
 'Sheet in which last used quotation and invoice numbers are stored
+'This sheet is hidden and protected
 Const QI_NUMBER_SOURCE_SHEET As String = "QINUM"
 
 'Number of digits in a quotation/invoice number
@@ -45,6 +50,9 @@ Dim QISheet As Object
 
 'Store the full quotation number as a string
 Dim QIString As String
+
+'New quotation number as a string
+Dim NewQIString As String
 
 'Index of the sheet named 'Quotation' in the ThisComponent.Sheets list
 Dim QSheetIndex as Integer
@@ -151,24 +159,38 @@ Sub GenerateQINumber(QuoteOrInv As Integer)
 	'Compute format string. E.g. if quotation number is 7 digits, format string
 	'will be 7 zeros: 0000000
 	For i = 1 to QINUM_LENGTH-1
-		QINumFormatString = QINumFormatString + "0"
+		QINumFormatString = QINumFormatString & "0"
 	Next i
 	
 	'Place new value of quotation/invoice number in QICell
 	'Place new value of quotation/invoice number in QI_NUMBER_SOURCE_SHEET
 	If QuoteOrInv = 0 Then
-		QICell.String = "Q" + Format(NewQINum, QINumFormatString)
-		QISourceCell.String = "Q" + Format(NewQINum, QINumFormatString)
+		NewQIString = "Q" & Format(NewQINum, QINumFormatString)
 	Else
-		QICell.String = "I" + Format(NewQINum, QINumFormatString)
-		QISourceCell.String = "I" + Format(NewQINum, QINumFormatString)
+		NewQIString = "I" & Format(NewQINum, QINumFormatString)
 	End If
+		
+	QICell.String = NewQIString
+	QISourceCell.String = NewQIString
 
 End Sub
 
 Sub WriteQINumber(QuoteOrInv As Integer)
+	REM Write an entry into the QINUM.csv file for each new quotation
+	REM or invoice written.
+	REM Format of one row of QINUM.csv:
+	REM Quotation/Invoice Number,QuoteOrInv Boolean value, Date, Name of client
 
+	'The string to be written to the QINUM.csv file
+	Dim DataEntry As String
+	'Client Name
+	Dim Client As String
 	
+	Client = Cells(QISheet, CLIENT_ROW, CLIENT_COL).String
+	' The keyword 'Date' used in this context refers to today's date
+	DataEntry = NewQIString & "," & QuoteOrInv & "," & Date & "," & Client
+	
+	Cells(QISheet,5,3).String = DataEntry
 
 End Sub
 
@@ -180,8 +202,8 @@ Sub Test
 	
 	Dim MySheet As Object
 	
-	MySheet = AllSheets.getByName("QINUM")
+	MySheet = AllSheets.getByName("Quotation")
 	
-	MySheet.getCellByPosition(0,0).String = "Yes " + "And No"
+	MySheet.getCellByPosition(7,0).String = Date
 
 End Sub
