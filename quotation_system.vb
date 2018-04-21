@@ -8,24 +8,37 @@ REM Place new quotation/invoice number in the correct cell
 REM Write new quotation/invoice, date, and client name to the
 REM 'QINUM.csv' file
 
+' ** IMPORTANT ** '
+' The sheet 'Invoice' must immediately follow the sheet 'Quotation'
+' The cell containing the last invoice number must be immediately below
+' the cell containing the last quotation number.
+
 Option Explicit
 
 ' ***** GLOBAL VARIABLES ***** '
+
+'Represent the row and column of any cell, where the cell is represented by a
+'1D array with row at index 0 and column at index 1.
+'Every (row,col) array name ends in XY
+Const ROW As Integer = 0
+Const COL As Integer = 1
 
 'Row and Column position of the quotation/invoice number in the sheets where
 'they will be used in the quotation/invoice.
 'Row 1 in sheet = row 1 in this code
 'Col A in sheet = col 1 in this code
-Const QIROW As Integer = 7
-Const QICOL As Integer = 6
+Dim QIRecipientXY(2) As Integer
+Const QI_REC_ROW As Integer = 7
+Const QI_REC_COL As Integer = 6
 
 'Rows and Column of last used quotation and invoice number. invoice number
 'must be one row below quotation number
-Const QROW As Integer = 1
-Const QCOL As Integer = 1
-Const IROW As Integer = 2
+Dim QISourceXY(2) As Integer
+Const Q_SRC_ROW As Integer = 1
+Const Q_SRC_COL As Integer = 1
 
 'Location in Quotation/Invoice Sheet of the client name
+Dim ClientXY(2) As Integer
 Const CLIENT_ROW As Integer = 6
 Const CLIENT_COL As Integer = 1
 
@@ -118,8 +131,19 @@ Sub InitializeGlobals(QuoteOrInv As Integer)
 	' "Invoice" sheet
 	QISheet = AllSheets.getByIndex(QSheetIndex + QuoteOrInv)
 	
+	'Saving row-col values of 3 cells in their respective arrays
+	
+	QIRecipientXY(ROW) = QI_REC_ROW
+	QIRecipientXY(COL) = QI_REC_COL
+	
+	QISourceXY(ROW) = Q_SRC_ROW
+	QISourceXY(COL) = Q_SRC_COL
+	
+	ClientXY(ROW) = CLIENT_ROW
+	ClientXY(COL) = CLIENT_COL
+	
 	QIString = Cells(AllSheets.getByName(QI_NUMBER_SOURCE_SHEET), _
-					 QROW + QuoteOrInv, QCOL).String
+					 QISourceXY(ROW) + QuoteOrInv, QISourceXY(COL)).String
 	
 End Sub
 
@@ -151,9 +175,9 @@ Sub GenerateQINumber(QuoteOrInv As Integer)
 	NewQINum = QINum + 1
 	
 	QISourceCell = Cells(AllSheets.getByName(QI_NUMBER_SOURCE_SHEET), _
-						 QROW + QuoteOrInv, QCOL)
+						 QISourceXY(ROW) + QuoteOrInv, QISourceXY(COL))
 	
-	QICell = Cells(QISheet, QIROW, QICOL)
+	QICell = Cells(QISheet, QIRecipientXY(ROW), QIRecipientXY(COL))
 	
 	QINumFormatString = "0"
 	'Compute format string. E.g. if quotation number is 7 digits, format string
@@ -162,15 +186,16 @@ Sub GenerateQINumber(QuoteOrInv As Integer)
 		QINumFormatString = QINumFormatString & "0"
 	Next i
 	
-	'Place new value of quotation/invoice number in QICell
-	'Place new value of quotation/invoice number in QI_NUMBER_SOURCE_SHEET
 	If QuoteOrInv = 0 Then
-		NewQIString = "Q" & Format(NewQINum, QINumFormatString)
+		NewQIString = "Q"
 	Else
-		NewQIString = "I" & Format(NewQINum, QINumFormatString)
+		NewQIString = "I"
 	End If
-		
+	
+	NewQIString = NewQIString & Format(NewQINum, QINumFormatString)
+	'Place new value of quotation/invoice number in QICell
 	QICell.String = NewQIString
+	'Place new value of quotation/invoice number in QI_NUMBER_SOURCE_SHEET
 	QISourceCell.String = NewQIString
 
 End Sub
@@ -186,7 +211,7 @@ Sub WriteQINumber(QuoteOrInv As Integer)
 	'Client Name
 	Dim Client As String
 	
-	Client = Cells(QISheet, CLIENT_ROW, CLIENT_COL).String
+	Client = Cells(QISheet, ClientXY(ROW), ClientXY(COL)).String
 	' The keyword 'Date' used in this context refers to today's date
 	DataEntry = NewQIString & "," & QuoteOrInv & "," & Date & "," & Client
 	
@@ -201,9 +226,12 @@ Sub Test
 	AllSheets = Doc.Sheets
 	
 	Dim MySheet As Object
+	Dim Coordinate(2) As Integer
+	
+	Coordinate(0)
 	
 	MySheet = AllSheets.getByName("Quotation")
 	
-	MySheet.getCellByPosition(7,0).String = Date
+	MySheet.getCellByPosition(7,0).String = Coordinate(0)
 
 End Sub
