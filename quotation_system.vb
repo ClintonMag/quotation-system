@@ -60,6 +60,13 @@ Const QI_NUMBER_SOURCE_SHEET As String = "QINUM"
 'Number of digits in a quotation/invoice number
 Const QINUM_LENGTH = 7
 
+'The name of the ods document for which this macro is meant
+Const PARENT_FILE As String = "Stock_And_Quotes.ods"
+
+'The csv file where list of quotation numbers used will be stored
+'It's a csv for now, database to be used in future
+Const CSVFILE = "QINUM.csv"
+
 'The current spreadsheet document
 Dim Doc As Object
 
@@ -218,17 +225,45 @@ Sub WriteQINumber(QuoteOrInv As Integer)
 	Dim DataEntry As String
 	'Client Name
 	Dim Client As String
+	'The path of 'Stock_And_Quotes.ods', the document this macro is for.
+	Dim DocPath As String
+	'Index of first appearance of parent file name in it's directory string
+	Dim Index As Integer
+	'File path of the csv file in url format
+	Dim CSVFileURL As String
+	'The file handle through which communication with the CSVFILE is done
+	Dim FileNo As Integer
+	'Directory to the folder in which PARENT_FILE is contained
+	Dim ParentDir As String
+	
 	
 	Client = Cells(QISheet, ClientXY(ROW), ClientXY(COL)).String
 	' The keyword 'Date' used in this context refers to today's date
 	DataEntry = NewQIString & "," & QuoteOrInv & "," & Date & "," & Client
 	
-	Cells(QISheet,5,3).String = DataEntry
+	DocPath = Doc.getURL()
+	Index = InStr(DocPath, PARENT_FILE)
+	ParentDir = Mid(DocPath, 1, Index-1)
+	CSVFileURL = ParentDir & CSVFILE
+	
+	'The DataEntry string will be written to the file specified by CSVFileURL
+	
+	'FreeFile function is used to get a free file handle	
+	
+	FileNo = FreeFile
+	'Indetation used as file is free for use between Open and Close statements
+	Open CSVFileURL For Append As #FileNo
+		
+		Print #FileNo, DataEntry
+	
+	Close #FileNo
 
 End Sub
 
 
 Sub Test
+	'A subroutine to experiment with code to study it's behaviour.
+	'Frequently replaced with new test code.
 
 	Doc = ThisComponent
 	AllSheets = Doc.Sheets
@@ -236,11 +271,10 @@ Sub Test
 	Dim MySheet As Object
 	Dim Coordinate(2) As Integer
 	
-	Coordinate(0)
-	
 	MySheet = AllSheets.getByName("Quotation")
 	
 	MySheet.getCellByPosition(7,0).String = Coordinate(0)
+	
 
 End Sub
 
