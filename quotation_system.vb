@@ -1,12 +1,5 @@
 REM  *****  BASIC  *****
 
-' TODO: Using ThisComponent.getURL() to get url of current spreadsheet
-' document.
-' Search the string for "/Hope" provided the filename is Hope Of Eden Stocks
-' Use the returned index to extract just the path name up to the directory that
-' the current file is in.
-' Open QINUM by combining the current directory string with it's file name
-' Write to it. use append mode
 
 REM QuotationSystem
 
@@ -251,7 +244,7 @@ Sub WriteQINumber(QuoteOrInv As Integer)
 	'FreeFile function is used to get a free file handle	
 	
 	FileNo = FreeFile
-	'Indetation used as file is free for use between Open and Close statements
+	'Indentation used as file is free for use between Open and Close statements
 	Open CSVFileURL For Append As #FileNo
 		
 		Print #FileNo, DataEntry
@@ -269,34 +262,8 @@ Sub Test
 	AllSheets = Doc.Sheets
 	
 	Dim MySheet As Object
-	Dim Coordinate(2) As Integer
 	
 	MySheet = AllSheets.getByName("Quotation")
 	
-	MySheet.getCellByPosition(7,0).String = Coordinate(0)
-	
 
-End Sub
-
-Sub ExampleWorkWithAFile
-	Dim iNumber As Integer
-	Dim sLine As String
-	Dim aFile As String
-	Dim sMsg As String
-    aFile = "C:\Users\Clinton\Computer_Science\Projects\quotation_system\data.txt"
-    iNumber = Freefile
-    Open aFile For Output As #iNumber
-    Print #iNumber, "This is a line of text"
-    Print #iNumber, "This is another line of text"
-    Close #iNumber
-    iNumber = Freefile
-    Open aFile For Input As iNumber
-    While Not eof(iNumber)
-        Line Input #iNumber, sLine
-        If sLine <>"" Then
-            sMsg = sMsg & sLine & chr(13)
-        End If
-    Wend
-    Close #iNumber
-    MsgBox sMsg
 End Sub
