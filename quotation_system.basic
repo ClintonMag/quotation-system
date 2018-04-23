@@ -294,16 +294,16 @@ Sub MainProcess(QuoteOrInv)
 	Doc.store
 	
 	'Remove the button used to run this very script
+	'Unprotect sheet; can't delete controls from protected sheets
+	QISheet.unprotect("")
+	
 	Dim ActiveRange As Object
 	ActiveRange = QISheet.getCellRangeByName(ACTIVE_RANGE)
 	ActiveRange.clearContents(com.sun.star.sheet.CellFlags.OBJECTS)
-	
+	'Protect again
+	QISheet.protect("")
 	
 	'Make a copy of file containing only the quotation/invoice worked on
-	
-	'Start by moving QISheet to the end of the list of sheets so that all those
-	'that come before, whatever they are, are removed.
-	AllSheets.moveByName(DocumentType, AllSheets.Count-1)
 	
 	'Remove all sheets that aren't QISheet
 	i = 0
@@ -317,14 +317,20 @@ Sub MainProcess(QuoteOrInv)
 		End If
 	Loop
 	
-	'The full path to NewDoc. NewDoc will be named by its quotation/invoice no.
+	'Full path to the copy. The copy will be named by its quotation/invoice no.
 	Dim NewDocPath As String
 	NewDocPath = ParentDir & NEW_QUOTATIONS_AND_INVOICES_FOLDER _
 				 & NewQIString & ".ods"
-	
+
 	Dim Props()
 	
 	Doc.storeToURL(NewDocPath, Props())
+	
+	'Open the copy
+	StarDesktop.loadComponentFromURL(NewDocPath, "_blank", 0, Props())
+	
+	'Close the main document to prevent saving a sheet with deleted sheets
+	Doc.close(True)
 	
 End Sub
 
