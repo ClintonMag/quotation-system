@@ -119,14 +119,37 @@ Sub MainProcess(QuoteOrInv)
 	REM Start the main invoice/quotation nunmber update procedure once it's
 	REM which is to be updated
 	
-	InitializeGlobals(QuoteOrInv)
-	GenerateQINumber(QuoteOrInv)
-	WriteQINumber(QuoteOrInv)
-
-End Sub
-
-Sub InitializeGlobals(QuoteOrInv As Integer)
-	REM Initializes the global variables
+	
+	' ***** Check if user is done working on a quotation/invoice ***** '
+	
+	
+	'String to display in message box to check completion of quotation/invoice
+	Dim Query As String
+	'Title of message box to appear in title bar
+	Dim Title As String
+	'The word 'quotation' or 'invoice', depending on which one is worked on
+	Dim DocumentType As String
+	
+	If QuoteOrInv = 0 Then
+		DocumentType = "Quotation"
+	Else
+		DocumentType = "Invoice"
+	End If
+	
+	Title = DocumentType & " Complete?"
+	
+	Query = "Did you complete the entire " & DocumentType & _
+			" and did you also enter the Customer Name?"
+	
+	'Check if the quotation/invoice has been completed
+	If MsgBox(Query, _
+			  MB_YESNO + MB_DEFBUTTON2 + MB_ICONQUESTION, _
+			  Title) = IDNO Then
+		Exit Sub
+	End If
+	
+	
+	' ***** Initializes the global variables ***** ' 
 	
 	Doc = ThisComponent
 	
@@ -152,7 +175,66 @@ Sub InitializeGlobals(QuoteOrInv As Integer)
 	
 	QIString = Cells(AllSheets.getByName(QI_NUMBER_SOURCE_SHEET), _
 					 QISourceXY(ROW) + QuoteOrInv, QISourceXY(COL)).String
+					 
+
+	'Generate a new quotation/invoice number, place it where needed.
+	GenerateQINumber(QuoteOrInv)
 	
+	
+	' ***** Write this new quotation/invoice number to a csv file ***** '
+	
+	'Write an entry into CSVFILE for each new quotation or invoice written.
+	'Format of one row of CSVFILE:
+	'Quotation/Invoice Number,QuoteOrInv Boolean value, Date, Name of client
+
+	'The string to be written to the QINUM.csv file
+	Dim DataEntry As String
+	'Client Name
+	Dim Client As String
+	'The path of PARENT_FILE, the document this macro is for.
+	Dim DocPath As String
+	'Index of first appearance of parent file name in it's directory string 
+	'E.g. If file is "file:///the/myfile.ods", the index of the 'm' in the
+	'file name "myfile.ods" will be 13 (they start at 1).
+	Dim FileNameIndex As Integer
+	'File path of the csv file in url format
+	Dim CSVFileURL As String
+	'The file handle through which communication with the CSVFILE is done
+	Dim FileNo As Integer
+	'Directory to the folder in which PARENT_FILE is contained
+	Dim ParentDir As String
+	
+	
+	Client = Cells(QISheet, ClientXY(ROW), ClientXY(COL)).String
+	' The keyword 'Date' used in this context refers to today's date
+	DataEntry = NewQIString & "," & QuoteOrInv & "," & Date & "," & Client
+	
+	DocPath = Doc.getURL()
+	FileNameIndex = InStr(DocPath, PARENT_FILE)
+	ParentDir = Mid(DocPath, 1, FileNameIndex-1)
+	CSVFileURL = ParentDir & CSVFILE
+	
+	'The DataEntry string will be written to the file specified by CSVFileURL
+	
+	'FreeFile function is used to get a free file handle	
+	FileNo = FreeFile
+	'Indentation used as file is free for use between Open and Close statements
+	Open CSVFileURL For Append As #FileNo
+		
+		Print #FileNo, DataEntry
+	
+	Close #FileNo
+	
+	
+	' ***** Save file to keep last used quotation/invoice number ***** '
+	Doc.store
+	
+	'Make a copy of file containing only the quotation/invoice worked on
+	
+	'The new spreadsheet document to contain the completed quotation/invoice
+	'Dim NewDoc As Object
+	
+
 End Sub
 
 Sub GenerateQINumber(QuoteOrInv As Integer)
@@ -205,51 +287,6 @@ Sub GenerateQINumber(QuoteOrInv As Integer)
 	QICell.String = NewQIString
 	'Place new value of quotation/invoice number in QI_NUMBER_SOURCE_SHEET
 	QISourceCell.String = NewQIString
-
-End Sub
-
-Sub WriteQINumber(QuoteOrInv As Integer)
-	REM Write an entry into the QINUM.csv file for each new quotation
-	REM or invoice written.
-	REM Format of one row of QINUM.csv:
-	REM Quotation/Invoice Number,QuoteOrInv Boolean value, Date, Name of client
-
-	'The string to be written to the QINUM.csv file
-	Dim DataEntry As String
-	'Client Name
-	Dim Client As String
-	'The path of 'Stock_And_Quotes.ods', the document this macro is for.
-	Dim DocPath As String
-	'Index of first appearance of parent file name in it's directory string
-	Dim Index As Integer
-	'File path of the csv file in url format
-	Dim CSVFileURL As String
-	'The file handle through which communication with the CSVFILE is done
-	Dim FileNo As Integer
-	'Directory to the folder in which PARENT_FILE is contained
-	Dim ParentDir As String
-	
-	
-	Client = Cells(QISheet, ClientXY(ROW), ClientXY(COL)).String
-	' The keyword 'Date' used in this context refers to today's date
-	DataEntry = NewQIString & "," & QuoteOrInv & "," & Date & "," & Client
-	
-	DocPath = Doc.getURL()
-	Index = InStr(DocPath, PARENT_FILE)
-	ParentDir = Mid(DocPath, 1, Index-1)
-	CSVFileURL = ParentDir & CSVFILE
-	
-	'The DataEntry string will be written to the file specified by CSVFileURL
-	
-	'FreeFile function is used to get a free file handle	
-	
-	FileNo = FreeFile
-	'Indentation used as file is free for use between Open and Close statements
-	Open CSVFileURL For Append As #FileNo
-		
-		Print #FileNo, DataEntry
-	
-	Close #FileNo
 
 End Sub
 
