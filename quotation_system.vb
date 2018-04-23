@@ -46,6 +46,9 @@ Const CLIENT_COL As Integer = 1
 'Sheet in which quotations are made
 Const QUOTATION_SHEET As String = "Quotation"
 
+'The range of cells within QUOTATION_SHEET that constitute the quotation
+Const ACTIVE_RANGE As String = "A1:G1024"
+
 'Sheet in which last used quotation and invoice numbers are stored
 'This sheet is hidden and protected
 Const QI_NUMBER_SOURCE_SHEET As String = "QINUM"
@@ -61,7 +64,7 @@ Const PARENT_FILE As String = "Stock_And_Quotes.ods"
 Const CSVFILE = "QINUM.csv"
 
 'The folder that will contain new quotations/invoices
-Const NEW_QUOTATIONS_AND_INVOICES As String = "New_Quotations_And_Invoices"
+Const NEW_QUOTATIONS_AND_INVOICES_FOLDER As String = "New_Quotations_And_Invoices/"
 
 'The current spreadsheet document
 Dim Doc As Object
@@ -182,9 +185,10 @@ Sub MainProcess(QuoteOrInv)
 					 
 	'Select any cell (here, it's cell A1) to force any cells in edit mode to
 	'to commit their contents. Required so that the new client name can be
-	'recognised if the button was pressed before the Enter button was pressed
-	'after the client name was typed out.
+	'stored in the cell if the button was pressed immediately after the client
+	'name was typed out, but before the Enter button was pressed.
 	Doc.CurrentController.select(Cells(QISheet,1,1))
+
 
 	' *** Generate a new quotation/invoice number, place it where needed. *** '
 	
@@ -289,31 +293,39 @@ Sub MainProcess(QuoteOrInv)
 	'Save the file
 	Doc.store
 	
-	'Make a copy of file containing only the quotation/invoice worked on by
-	'making a new spreadsheet in memory, and attaching quotation/invoice sheet
-	'to the new document.
+	'Remove the button used to run this very script
+	Dim ActiveRange As Object
+	ActiveRange = QISheet.getCellRangeByName(ACTIVE_RANGE)
+	ActiveRange.clearContents(com.sun.star.sheet.CellFlags.OBJECTS)
 	
-	'The new spreadsheet document to contain the completed quotation/invoice
-	Dim NewDoc As Object
+	
+	'Make a copy of file containing only the quotation/invoice worked on
+	
+	'Start by moving QISheet to the end of the list of sheets so that all those
+	'that come before, whatever they are, are removed.
+	AllSheets.moveByName(DocumentType, AllSheets.Count-1)
+	
+	'Remove all sheets that aren't QISheet
+	i = 0
+	Dim TmpSheet As Object
+	Do While AllSheets.Count > 1
+		TmpSheet = AllSheets.getByIndex(i)
+		If TmpSheet.Name <> QISheet.Name Then
+			AllSheets.removeByName(TmpSheet.Name)
+		Else
+			i = i + 1
+		End If
+	Loop
 	
 	'The full path to NewDoc. NewDoc will be named by its quotation/invoice no.
 	Dim NewDocPath As String
+	NewDocPath = ParentDir & NEW_QUOTATIONS_AND_INVOICES_FOLDER _
+				 & NewQIString & ".ods"
 	
-	'Properties of NewDoc
-	'Open NewDoc in hidden mode by setting up it's properties
-	Dim Props(0) As New com.sun.star.beans.PropertyValue
-	Props(0).name = "Hidden"
-	Props(0).value = "True"
+	Dim Props()
 	
-	'Template used for NewDoc. Default template to be used.
-	Dim NewDocTemplate As String
-	NewDocTemplate = "private:factory/scalc"
+	Doc.storeToURL(NewDocPath, Props())
 	
-	'NewDocPath = ParentDir & "/" & NEW_QUOTATIONS_AND_INVOICES _
-	'			 & "/" & NewQINum & ".ods"
-	
-	
-
 End Sub
 
 
@@ -324,9 +336,34 @@ Sub Test
 	Doc = ThisComponent
 	AllSheets = Doc.Sheets
 	
-	Dim MySheet As Object
+	Dim Doc1 As Object, Doc2 As Object, obj1 As Object, obj2 As Object, obj3 As Object
+	Dim MySheet1 As Object, MySheet2 As Object
+	Dim MyTable As Object
+	Dim MyRange1 As Object, MyRange2 As Object
+	Dim mystr1 As Boolean, mystr2 As Boolean, mystr3 As Boolean
 	
-	MySheet = AllSheets.getByName("Quotation")
+	Dim NewDoc As Object
+	Dim NewDocPath As String
+	NewDocPath = "file:///C:testdoc.ods"
 	
+	'Properties of NewDoc
+	'Open NewDoc in hidden mode by setting up it's properties
+'	Dim Props(0) As New com.sun.star.beans.PropertyValue
+'	Props(0).name = "Hidden"
+'	Props(0).value = "True"
+	Dim Props()	
+	'Template used for NewDoc. Default template to be used.
+	Dim NewDocTemplate As String
+	NewDocTemplate = "private:factory/scalc"
+	
+	NewDoc = StarDesktop.loadComponentFromURL(NewDocTemplate, "_blank", 0, Props())
+	
+	MySheet1 = AllSheets.getByName("Quotation")
+	MyRange1 = MySheet1.getCellRangeByName("A1:G1024")	
+	obj1 = NewDoc.Sheets.getByIndex(0)
+	obj1.Name = "Q123"
+	obj3 = obj1.getCellRangeByName("A1:G1024")
 
+	obj3.DataArray = MyRange1.DataArray
+	
 End Sub
