@@ -60,6 +60,9 @@ Const PARENT_FILE As String = "Stock_And_Quotes.ods"
 'It's a csv for now, database to be used in future
 Const CSVFILE = "QINUM.csv"
 
+'The folder that will contain new quotations/invoices
+Const NEW_QUOTATIONS_AND_INVOICES As String = "New_Quotations_And_Invoices"
+
 'The current spreadsheet document
 Dim Doc As Object
 
@@ -83,6 +86,7 @@ Dim QSheetIndex as Integer
 
 Function Cells(sheet As Object, x As Integer, y As Integer) As Object
 	REM Simplify calls to retrieve cell position by coordinates
+	REM x and y are cell indices that start at 1. So cell A1 is cell (1,1).
 	
 	Cells = sheet.getCellByPosition(y-1, x-1)
 End Function
@@ -176,9 +180,63 @@ Sub MainProcess(QuoteOrInv)
 	QIString = Cells(AllSheets.getByName(QI_NUMBER_SOURCE_SHEET), _
 					 QISourceXY(ROW) + QuoteOrInv, QISourceXY(COL)).String
 					 
+	'Select any cell (here, it's cell A1) to force any cells in edit mode to
+	'to commit their contents. Required so that the new client name can be
+	'recognised if the button was pressed before the Enter button was pressed
+	'after the client name was typed out.
+	Doc.CurrentController.select(Cells(QISheet,1,1))
 
-	'Generate a new quotation/invoice number, place it where needed.
-	GenerateQINumber(QuoteOrInv)
+	' *** Generate a new quotation/invoice number, place it where needed. *** '
+	
+	'Read the last quotation/invoice number, increase it by 1 and place it
+	'in the correct cell
+	
+	Dim i as Integer
+	
+	'String format to be used by the Format function to specify number of zeros
+	'for left-padding
+	Dim QINumFormatString As String
+	
+	'Quotation/Invoice Number
+	Dim QINum As Long
+	
+	'New Quotation/Invoice Number
+	Dim NewQINum as Long
+	
+	'Cell where last used quotation/invoice number is stored
+	Dim QISourceCell As Object
+	
+	'Cell to receive the new quotation or invoice number in the QUOTATION_SHEET
+	'or the QI_NUMBER_SOURCE_SHEET
+	Dim QICell as Object
+
+	'Extract quotation/invoice integer portion, increment by 1.
+	QINum = Val(Right(QIString, QINUM_LENGTH))
+	NewQINum = QINum + 1
+	
+	QISourceCell = Cells(AllSheets.getByName(QI_NUMBER_SOURCE_SHEET), _
+						 QISourceXY(ROW) + QuoteOrInv, QISourceXY(COL))
+	
+	QICell = Cells(QISheet, QIRecipientXY(ROW), QIRecipientXY(COL))
+	
+	QINumFormatString = "0"
+	'Compute format string. E.g. if quotation number is 7 digits, format string
+	'will be 7 zeros: 0000000
+	For i = 1 to QINUM_LENGTH-1
+		QINumFormatString = QINumFormatString & "0"
+	Next i
+	
+	If QuoteOrInv = 0 Then
+		NewQIString = "Q"
+	Else
+		NewQIString = "I"
+	End If
+	
+	NewQIString = NewQIString & Format(NewQINum, QINumFormatString)
+	'Place new value of quotation/invoice number in QICell
+	QICell.String = NewQIString
+	'Place new value of quotation/invoice number in QI_NUMBER_SOURCE_SHEET
+	QISourceCell.String = NewQIString
 	
 	
 	' ***** Write this new quotation/invoice number to a csv file ***** '
@@ -227,66 +285,34 @@ Sub MainProcess(QuoteOrInv)
 	
 	
 	' ***** Save file to keep last used quotation/invoice number ***** '
+	
+	'Save the file
 	Doc.store
 	
-	'Make a copy of file containing only the quotation/invoice worked on
+	'Make a copy of file containing only the quotation/invoice worked on by
+	'making a new spreadsheet in memory, and attaching quotation/invoice sheet
+	'to the new document.
 	
 	'The new spreadsheet document to contain the completed quotation/invoice
-	'Dim NewDoc As Object
+	Dim NewDoc As Object
 	
-
-End Sub
-
-Sub GenerateQINumber(QuoteOrInv As Integer)
-	REM Read the last quotation/invoice number, increase it by 1 and place it
-	REM in the correct cell
+	'The full path to NewDoc. NewDoc will be named by its quotation/invoice no.
+	Dim NewDocPath As String
 	
-	Dim i as Integer
+	'Properties of NewDoc
+	'Open NewDoc in hidden mode by setting up it's properties
+	Dim Props(0) As New com.sun.star.beans.PropertyValue
+	Props(0).name = "Hidden"
+	Props(0).value = "True"
 	
-	'String format to be used by the Format function to specify number of zeros
-	'for left-padding
-	Dim QINumFormatString As String
+	'Template used for NewDoc. Default template to be used.
+	Dim NewDocTemplate As String
+	NewDocTemplate = "private:factory/scalc"
 	
-	'Quotation/Invoice Number
-	Dim QINum As Long
+	'NewDocPath = ParentDir & "/" & NEW_QUOTATIONS_AND_INVOICES _
+	'			 & "/" & NewQINum & ".ods"
 	
-	'New Quotation/Invoice Number
-	Dim NewQINum as Long
 	
-	'Cell where last used quotation/invoice number is stored
-	Dim QISourceCell As Object
-	
-	'Cell to receive the new quotation or invoice number in the QUOTATION_SHEET
-	'or the QI_NUMBER_SOURCE_SHEET
-	Dim QICell as Object
-
-	'Extract quotation/invoice integer portion, increment by 1.
-	QINum = Val(Right(QIString, QINUM_LENGTH))
-	NewQINum = QINum + 1
-	
-	QISourceCell = Cells(AllSheets.getByName(QI_NUMBER_SOURCE_SHEET), _
-						 QISourceXY(ROW) + QuoteOrInv, QISourceXY(COL))
-	
-	QICell = Cells(QISheet, QIRecipientXY(ROW), QIRecipientXY(COL))
-	
-	QINumFormatString = "0"
-	'Compute format string. E.g. if quotation number is 7 digits, format string
-	'will be 7 zeros: 0000000
-	For i = 1 to QINUM_LENGTH-1
-		QINumFormatString = QINumFormatString & "0"
-	Next i
-	
-	If QuoteOrInv = 0 Then
-		NewQIString = "Q"
-	Else
-		NewQIString = "I"
-	End If
-	
-	NewQIString = NewQIString & Format(NewQINum, QINumFormatString)
-	'Place new value of quotation/invoice number in QICell
-	QICell.String = NewQIString
-	'Place new value of quotation/invoice number in QI_NUMBER_SOURCE_SHEET
-	QISourceCell.String = NewQIString
 
 End Sub
 
